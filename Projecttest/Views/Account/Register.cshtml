@@ -1,0 +1,41 @@
+@{
+    ViewData["Title"] = "Cadastro";
+}
+
+<div class="row justify-content-center mt-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-body p-5">
+                <h2 class="mb-4 text-center fw-bold">Criar conta</h2>
+
+                @if (ViewBag.Error != null)
+                {
+                    <div class="alert alert-danger rounded-3 border-0 py-2 text-center">@ViewBag.Error</div>
+                }
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label class="form-label text-secondary fw-semibold small">Nome</label>
+                        <input type="text" name="name" class="form-control rounded-pill px-3 py-2 bg-light border-0" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-secondary fw-semibold small">E-mail</label>
+                        <input type="email" name="email" class="form-control rounded-pill px-3 py-2 bg-light border-0" required />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-secondary fw-semibold small">Senha</label>
+                        <input type="password" name="password" class="form-control rounded-pill px-3 py-2 bg-light border-0" required />
+                    </div>
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary rounded-pill fw-semibold shadow-sm py-2">
+                             <i class="bi bi-person-plus-fill me-2"></i>Cadastrar
+                        </button>
+                    </div>
+                    <div class="text-center">
+                        <a asp-action="Login" class="text-decoration-none small text-muted">Já tem uma conta? <span class="text-primary fw-semibold">Entrar</span></a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,196 @@
+﻿@{
+    ViewData["Title"] = "Foco nos Estudos";
+}
+
+<div class="container mt-5">
+    <h2 class="text-center mb-4">Olá, @ViewBag.UserName</h2>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6 text-center">
+            <div class="card shadow-sm">
+                <div class="card-body d-flex flex-column align-items-center p-4">
+                    <div class="position-relative mb-4" style="width: 220px; height: 220px;">
+                        <svg viewBox="0 0 120 120" class="w-100 h-100">
+                            <circle cx="60" cy="60" r="54" fill="none" stroke="#e9ecef" stroke-width="8" />
+                            <circle id="progressCircle" cx="60" cy="60" r="54" fill="none" stroke="#0d6efd" stroke-width="8"
+                                    stroke-linecap="round" stroke-dasharray="339.292" stroke-dashoffset="339.292"
+                                    transform="rotate(-90 60 60)" />
+                        </svg>
+                        <div class="position-absolute top-50 start-50 translate-middle text-center w-100">
+                            <div id="timerDisplay" class="fs-2 fw-bold" style="font-variant-numeric: tabular-nums;">00:00:00</div>
+                            <div id="minutesTarget" class="text-muted small mt-1">Meta: livre</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 w-100 text-start">
+                        <label class="form-label fw-semibold text-secondary small">Tipo de Atividade</label>
+                        <select class="form-select bg-light border-0" id="badgeSelect" name="badge">
+                            <option value="Foco">🎯 Foco</option>
+                            <option value="Estudo">📚 Estudo</option>
+                            <option value="Exercícios">📝 Exercícios</option>
+                            <option value="Videoaulas">▶️ Videoaulas</option>
+                            <option value="Pesquisas">🔍 Pesquisas</option>
+                            <option value="Documentações">📖 Documentações</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 w-100 text-start">
+                        <label class="form-label fw-semibold text-secondary small">Matéria / Assunto (opcional)</label>
+                        <input type="text" class="form-control bg-light border-0" id="subject" name="subject" placeholder="Ex: Matemática, Programação...">
+                    </div>
+
+                    <div class="mb-4 w-100 text-start">
+                        <label class="form-label fw-semibold text-secondary small">Meta de tempo (minutos, opcional)</label>
+                        <input type="number" min="1" class="form-control bg-light border-0" id="targetMinutes" placeholder="Ex: 25">
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-center gap-2 w-100 mt-2">
+                        <button class="btn btn-success flex-fill rounded-pill fw-semibold shadow-sm" id="btnStart"><i class="bi bi-play-fill me-1"></i> Iniciar</button>
+                        <button class="btn btn-warning flex-fill rounded-pill fw-semibold shadow-sm text-dark" id="btnPause"><i class="bi bi-pause-fill me-1"></i> Pausar</button>
+                        <button class="btn btn-danger flex-fill rounded-pill fw-semibold shadow-sm" id="btnStop"><i class="bi bi-stop-fill me-1"></i> Finalizar</button>
+                        <button class="btn btn-outline-light flex-fill rounded-pill fw-semibold shadow-sm d-none" id="btnStopAlarm"><i class="bi bi-volume-mute-fill me-1"></i> Parar alarme</button>
+                    </div>
+
+                    <audio id="alarmSound" src="~/Sound/freesound_community-alarm-clock-short-6402.mp3" preload="auto"></audio>
+
+                    <form id="sessionForm" method="post" asp-action="SaveSession">
+                        <input type="hidden" name="durationMinutes" id="durationMinutes" />
+                        <input type="hidden" name="subject" id="hiddenSubject" />
+                        <input type="hidden" name="targetMinutes" id="hiddenTargetMinutes" />
+                        <input type="hidden" name="badge" id="hiddenBadge" />
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a asp-action="History" class="btn btn-outline-primary rounded-pill px-4 shadow-sm"><i class="bi bi-clock-history me-1"></i> Ver histórico</a>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    let startTime = null;
+    let elapsedMs = 0;
+    let intervalId = null;
+    const circumference = 2 * Math.PI * 54; // mesmo raio do círculo (r=54)
+
+    const progressCircle = document.getElementById('progressCircle');
+    const timerDisplay = document.getElementById('timerDisplay');
+    const minutesTargetLabel = document.getElementById('minutesTarget');
+    const targetInput = document.getElementById('targetMinutes');
+    const alarmSound = document.getElementById('alarmSound');
+    const btnStopAlarm = document.getElementById('btnStopAlarm');
+
+    progressCircle.style.strokeDasharray = circumference;
+    progressCircle.style.strokeDashoffset = circumference;
+
+    function showStopAlarmButton(show) {
+        if (show) {
+            btnStopAlarm.classList.remove('d-none');
+        } else {
+            btnStopAlarm.classList.add('d-none');
+        }
+    }
+
+    function updateDisplay() {
+        const totalSeconds = Math.floor(elapsedMs / 1000);
+        const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+        const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+        const s = String(totalSeconds % 60).padStart(2, '0');
+        timerDisplay.innerText = `${h}:${m}:${s}`;
+
+        const targetMinutes = parseInt(targetInput.value);
+        if (!isNaN(targetMinutes) && targetMinutes > 0) {
+            const targetSeconds = targetMinutes * 60;
+            const progress = Math.min(totalSeconds / targetSeconds, 1);
+            const offset = circumference * (1 - progress);
+            progressCircle.style.strokeDashoffset = offset;
+            minutesTargetLabel.textContent = `Meta: ${targetMinutes} min`;
+
+            // Se atingiu 100% da meta, toca o alarme uma vez
+            if (progress >= 1 && !updateDisplay.alarmPlayed) {
+                updateDisplay.alarmPlayed = true;
+                try {
+                    alarmSound.currentTime = 0;
+                    alarmSound.play();
+                    showStopAlarmButton(true);
+                } catch (e) {
+                    console.warn('Não foi possível tocar o som do alarme automaticamente.', e);
+                }
+            }
+        } else {
+            // Sem meta definida, usa um progresso "livre" apenas para dar feedback visual (loop a cada 60min)
+            const cycleSeconds = 60 * 60;
+            const progress = (totalSeconds % cycleSeconds) / cycleSeconds;
+            const offset = circumference * (1 - progress);
+            progressCircle.style.strokeDashoffset = offset;
+            minutesTargetLabel.textContent = 'Meta: livre';
+        }
+    }
+
+    // Atualiza a visualização da meta em tempo real ao digitar
+    targetInput.addEventListener('input', () => {
+        updateDisplay.alarmPlayed = false; // se mudar a meta, libera o alarme de novo
+        if (!intervalId && startTime == null) {
+             const targetMinutes = parseInt(targetInput.value);
+             if (!isNaN(targetMinutes) && targetMinutes > 0) {
+                 minutesTargetLabel.textContent = `Meta: ${targetMinutes} min`;
+             } else {
+                 minutesTargetLabel.textContent = 'Meta: livre';
+             }
+        }
+    });
+
+    document.getElementById('btnStart').addEventListener('click', () => {
+        if (!startTime) {
+            startTime = new Date();
+        }
+        if (!intervalId) {
+            const startTick = Date.now() - elapsedMs;
+            intervalId = setInterval(() => {
+                elapsedMs = Date.now() - startTick;
+                updateDisplay();
+            }, 250);
+        }
+    });
+
+    document.getElementById('btnPause').addEventListener('click', () => {
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+    });
+
+    document.getElementById('btnStop').addEventListener('click', () => {
+        if (!startTime) {
+            alert("Você ainda não iniciou o cronômetro.");
+            return;
+        }
+        if (intervalId) {
+            clearInterval(intervalId);
+            intervalId = null;
+        }
+
+        const totalSeconds = Math.floor(elapsedMs / 1000);
+        const durationMinutes = Math.max(1, Math.floor(totalSeconds / 60));
+
+        document.getElementById('durationMinutes').value = durationMinutes;
+        document.getElementById('hiddenSubject').value = document.getElementById('subject').value;
+        document.getElementById('hiddenTargetMinutes').value = document.getElementById('targetMinutes').value;
+        document.getElementById('hiddenBadge').value = document.getElementById('badgeSelect').value;
+
+        document.getElementById('sessionForm').submit();
+    });
+
+    btnStopAlarm.addEventListener('click', () => {
+        try {
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
+        } finally {
+            showStopAlarmButton(false);
+        }
+    });
+</script>
+}
