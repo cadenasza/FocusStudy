@@ -272,8 +272,3 @@ https://localhost:7067
 - Internacionalização (pt-BR / en-US).
 
 ---
-
-## Licença
-
-Defina aqui a licença do projeto (por exemplo, MIT, Apache 2.0, etc.).  
-Enquanto não escolher uma, o repositório é, na prática, “direito reservado” (all rights reserved) por padrão do GitHub.
